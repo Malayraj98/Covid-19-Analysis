@@ -1,0 +1,892 @@
+---
+title: "Covid 19 Analysis R"
+author: "Malay Raj"
+date: "2023-08-28"
+output:
+  word_document: default
+  html_document: default
+---
+
+## COVID-19 IN INDIA :
+
+Dataset on Novel Corona Virus Disease 2019 in India
+
+## Loading Required Packages.
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(dplyr)
+library(ggplot2)
+library(skimr)
+library(plyr)
+library(lubridate)
+library(scales)
+library(plotly)
+```
+
+## Displaying my current working directory.
+
+```{r}
+getwd()
+```
+
+## Collecting the datas.
+
+```{r}
+covid = read.csv("C:/Covid 19 India Analysis/covid_19_india.csv")
+
+vaccine = read.csv("C:/Covid 19 India Analysis/covid_vaccine_statewise.csv")
+
+testing = read.csv("C:/Covid 19 India Analysis/StatewiseTestingDetails.csv")
+```
+
+## Displaying the first six rows of each dataset.
+
+```{r}
+head(covid)
+head(vaccine)
+head(testing)
+```
+
+## Checking the dimension of the datasets.
+
+```{r}
+dim(covid)
+dim(vaccine)
+dim(testing)
+```
+
+## Displaying the column names of our dataframes.
+
+```{r}
+colnames(covid)
+colnames(vaccine)
+colnames(testing)
+```
+
+## Inspecting the dataframes and look for inconguencies.
+
+```{r}
+str(covid)
+str(vaccine)
+str(testing)
+```
+
+## Changing the datatypes.
+
+```{r}
+covid$Date = as.Date(covid$Date)
+covid$ConfirmedIndianNational = as.integer(covid$ConfirmedIndianNational)
+covid$ConfirmedForeignNational = as.integer(covid$ConfirmedForeignNational)
+vaccine$Updated.On <- as.Date(vaccine$Updated.On, format = "%d/%m/%Y")
+vaccine$Updated.On <- format(vaccine$Updated.On, "%Y-%m-%d")
+vaccine$Updated.On = as.Date(vaccine$Updated.On)
+testing$Date = as.Date(testing$Date)
+```
+
+## Checking if it's changed or not.
+
+```{r}
+str(covid)
+str(vaccine)
+str(testing)
+```
+
+## Checking for null values in our datasets.
+
+```{r}
+null_sum <- colSums(is.na(covid))
+null_sum
+```
+
+```{r}
+null_sum <- colSums(is.na(vaccine))
+null_sum
+```
+
+```{r}
+null_sum <- colSums(is.na(testing))
+null_sum
+```
+
+## Removing certain columns from each of the datasets because we don't need them in our analysis.
+
+```{r}
+covid = subset(covid, select = -c(Sno))
+```
+
+```{r}
+vaccine = subset(vaccine, select = -c(X18.44.Years..Doses.Administered., X45.60.Years..Doses.Administered.,
+                                      X60..Years..Doses.Administered., X18.44.Years.Individuals.Vaccinated.,
+                                      X45.60.Years.Individuals.Vaccinated., X60..Years.Individuals.Vaccinated.))
+```
+
+## Checking the column names which are left for analysis.
+
+```{r}
+colnames(covid)
+colnames(vaccine)
+```
+
+## Renaming few columns from covid and vaccine datasets.
+
+```{r}
+covid = plyr::rename(covid, replace = c("State.UnionTerritory" = "State_UT"))
+```
+
+```{r}
+vaccine = plyr::rename(vaccine, replace=c( "Updated.On" = "updated_on",
+                                           "Total.Doses.Administered" = "total_doses_administered",
+                                           "First.Dose.Administered" = "first_dose_administered",
+                                           "Second.Dose.Administered" = "second_dose_administered",
+                                           "Male..Doses.Administered." = "male_doses_administered",
+                                           "Female..Doses.Administered." = "female_doses_administered",
+                                           "Transgender..Doses.Administered." = "transgender_doses_administered",
+                                           "Covaxin..Doses.Administered." = "covaxin_doses",
+                                           "CoviShield..Doses.Administered." = "covishield_doses",
+                                           "Sputnik.V..Doses.Administered." = "sputnik_V_doses",
+                                           "Male.Individuals.Vaccinated." = "males_vaccinated",
+                                           "Female.Individuals.Vaccinated." = "females_vaccinated",
+                                           "Transgender.Individuals.Vaccinated." = "transgender_vaccinated",
+                                           "Total.Individuals.Vaccinated" = "total_vaccinated"))
+```
+
+## Filling the missing values of few columns with 0.
+
+```{r}
+covid$ConfirmedIndianNational <- ifelse(is.na(covid$ConfirmedIndianNational), 0, covid$ConfirmedIndianNational)
+covid$ConfirmedForeignNational <- ifelse(is.na(covid$ConfirmedForeignNational), 0, covid$ConfirmedForeignNational)
+
+vaccine$total_doses_administered <- ifelse(is.na(vaccine$total_doses_administered), 0, vaccine$total_doses_administered)
+vaccine$Sessions <- ifelse(is.na(vaccine$Sessions), 0, vaccine$Sessions)
+vaccine$Sites <- ifelse(is.na(vaccine$Sites), 0, vaccine$Sites)
+vaccine$first_dose_administered <- ifelse(is.na(vaccine$first_dose_administered), 0, vaccine$first_dose_administered)
+vaccine$second_dose_administered <- ifelse(is.na(vaccine$second_dose_administered), 0, vaccine$second_dose_administered)
+vaccine$male_doses_administered <- ifelse(is.na(vaccine$male_doses_administered), 0, vaccine$male_doses_administered)
+vaccine$female_doses_administered <- ifelse(is.na(vaccine$female_doses_administered), 0, vaccine$female_doses_administered)
+vaccine$transgender_doses_administered <- ifelse(is.na(vaccine$transgender_doses_administered), 0, vaccine$transgender_doses_administered)
+vaccine$covaxin_doses <- ifelse(is.na(vaccine$covaxin_doses), 0, vaccine$covaxin_doses)
+vaccine$covishield_doses <- ifelse(is.na(vaccine$covishield_doses), 0, vaccine$covishield_doses)
+vaccine$sputnik_V_doses <- ifelse(is.na(vaccine$sputnik_V_doses), 0, vaccine$sputnik_V_doses)
+vaccine$AEFI <- ifelse(is.na(vaccine$AEFI), 0, vaccine$AEFI)
+vaccine$males_vaccinated <- ifelse(is.na(vaccine$males_vaccinated), 0, vaccine$males_vaccinated)
+vaccine$females_vaccinated <- ifelse(is.na(vaccine$females_vaccinated), 0, vaccine$females_vaccinated)
+vaccine$transgender_vaccinated <- ifelse(is.na(vaccine$transgender_vaccinated), 0, vaccine$transgender_vaccinated)
+vaccine$total_vaccinated <- ifelse(is.na(vaccine$total_vaccinated), 0, vaccine$total_vaccinated)
+
+
+testing$Negative <- ifelse(is.na(testing$Negative), 0, testing$Negative)
+testing$Positive <- ifelse(is.na(testing$Positive), 0, testing$Positive)
+```
+
+
+## Checking for the null values in our dataframes which are left after removing few columns.
+
+```{r}
+sum(is.na(covid))
+sum(is.na(vaccine))
+sum(is.na(testing))
+```
+## Checking for any duplicate values in our datasets.
+
+```{r}
+anyDuplicated(covid)
+anyDuplicated(vaccine)
+anyDuplicated(testing)
+```
+
+## Removing the duplicate values from testing dataset and checking again if there is any duplicate values left after removing them or not.
+
+```{r}
+testing <- unique(testing)
+
+anyDuplicated(testing)
+```
+
+## Seeing how many observations fall under each of these column.
+
+```{r}
+table(covid$State_UT)
+table(covid$Time)
+
+table(vaccine$updated_on)
+table(vaccine$State)
+
+table(testing$Date)
+table(testing$State)
+```
+
+## Creating Month columns from Dates and updated_on in each dataframe.
+
+```{r}
+covid$Month <- format(as.Date(covid$Date), "%b")
+vaccine$Month <- format(as.Date(vaccine$updated_on), "%b")
+testing$Month <- format(as.Date(testing$Date), "%b")
+```
+
+## Checking the new Month columns in each dataframe.
+
+```{r}
+str(covid)
+```
+
+```{r}
+str(vaccine)
+```
+
+```{r}
+str(testing)
+```
+
+## CONDUCTNG DESCRIPTIVE ANALYSIS:
+
+Descriptive analysis on few columns of our datasets.
+
+```{r}
+summary(covid$ConfirmedIndianNational)
+```
+
+```{r}
+summary(covid$ConfirmedForeignNational)
+```
+
+```{r}
+summary(covid$Cured)
+```
+
+```{r}
+summary(covid$Deaths)
+```
+
+```{r}
+summary(covid$Confirmed)
+```
+
+Comparing different columns with each other from each of our datasets.
+
+```{r}
+aggregate(covid$ConfirmedIndianNational ~ covid$State_UT, data = covid, FUN = mean)
+aggregate(covid$ConfirmedIndianNational ~ covid$State_UT, data = covid, FUN = median)
+aggregate(covid$ConfirmedIndianNational ~ covid$State_UT, data = covid, FUN = max)
+aggregate(covid$ConfirmedIndianNational ~ covid$State_UT, data = covid, FUN = min)
+```
+
+```{r}
+aggregate(covid$ConfirmedForeignNational ~ covid$State_UT, data = covid, FUN = mean)
+aggregate(covid$ConfirmedForeignNational ~ covid$State_UT, data = covid, FUN = median)
+aggregate(covid$ConfirmedForeignNational ~ covid$State_UT, data = covid, FUN = max)
+aggregate(covid$ConfirmedForeignNational ~ covid$State_UT, data = covid, FUN = min)
+```
+
+```{r}
+aggregate(covid$Cured ~ covid$State_UT, data = covid, FUN = mean)
+aggregate(covid$Cured ~ covid$State_UT, data = covid, FUN = median)
+aggregate(covid$Cured ~ covid$State_UT, data = covid, FUN = max)
+aggregate(covid$Cured ~ covid$State_UT, data = covid, FUN = min)
+```
+
+```{r}
+aggregate(covid$Deaths ~ covid$State_UT, data = covid, FUN = mean)
+aggregate(covid$Deaths ~ covid$State_UT, data = covid, FUN = median)
+aggregate(covid$Deaths ~ covid$State_UT, data = covid, FUN = max)
+aggregate(covid$Deaths ~ covid$State_UT, data = covid, FUN = min)
+```
+
+```{r}
+aggregate(covid$Confirmed ~ covid$State_UT, data = covid, FUN = mean)
+aggregate(covid$Confirmed ~ covid$State_UT, data = covid, FUN = median)
+aggregate(covid$Confirmed ~ covid$State_UT, data = covid, FUN = max)
+aggregate(covid$Confirmed ~ covid$State_UT, data = covid, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$total_doses_administered ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$total_doses_administered ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$total_doses_administered ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$total_doses_administered ~ vaccine$State, data = vaccine, FUN = min)
+
+```
+
+```{r}
+aggregate(vaccine$Sessions ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$Sessions ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$Sessions ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$Sessions ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$Sites ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$Sites ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$Sites ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$Sites ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$first_dose_administered ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$first_dose_administered ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$first_dose_administered ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$first_dose_administered ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$second_dose_administered ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$second_dose_administered ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$second_dose_administered ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$second_dose_administered ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$male_doses_administered ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$male_doses_administered ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$male_doses_administered ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$male_doses_administered ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$female_doses_administered ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$female_doses_administered ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$female_doses_administered ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$female_doses_administered ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$transgender_doses_administered ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$transgender_doses_administered ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$transgender_doses_administered ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$transgender_doses_administered ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$covaxin_doses ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$covaxin_doses ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$covaxin_doses ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$covaxin_doses ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$covishield_doses ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$covishield_doses ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$covishield_doses ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$covishield_doses ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$sputnik_V_doses ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$sputnik_V_doses ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$sputnik_V_doses ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$sputnik_V_doses ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$AEFI ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$AEFI ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$AEFI ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$AEFI ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$males_vaccinated ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$males_vaccinated ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$males_vaccinated ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$males_vaccinated ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$females_vaccinated ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$females_vaccinated ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$females_vaccinated ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$females_vaccinated ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$transgender_vaccinated ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$transgender_vaccinated ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$transgender_vaccinated ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$transgender_vaccinated ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(vaccine$total_vaccinated ~ vaccine$State, data = vaccine, FUN = mean)
+aggregate(vaccine$total_vaccinated ~ vaccine$State, data = vaccine, FUN = median)
+aggregate(vaccine$total_vaccinated ~ vaccine$State, data = vaccine, FUN = max)
+aggregate(vaccine$total_vaccinated ~ vaccine$State, data = vaccine, FUN = min)
+```
+
+```{r}
+aggregate(testing$TotalSamples ~ testing$State, data = testing, FUN = mean)
+aggregate(testing$TotalSamples ~ testing$State, data = testing, FUN = median)
+aggregate(testing$TotalSamples ~ testing$State, data = testing, FUN = max)
+aggregate(testing$TotalSamples ~ testing$State, data = testing, FUN = min)
+```
+
+```{r}
+aggregate(testing$Positive ~ testing$State, data = testing, FUN = mean)
+aggregate(testing$Positive ~ testing$State, data = testing, FUN = median)
+aggregate(testing$Positive ~ testing$State, data = testing, FUN = max)
+aggregate(testing$Positive ~ testing$State, data = testing, FUN = min)
+```
+
+```{r}
+aggregate(testing$Negative ~ testing$State, data = testing, FUN = mean)
+aggregate(testing$Negative ~ testing$State, data = testing, FUN = median)
+aggregate(testing$Negative ~ testing$State, data = testing, FUN = max)
+aggregate(testing$Negative ~ testing$State, data = testing, FUN = min)
+```
+
+## SUMMARY STATISTICS.
+
+```{r}
+skimr::skim_without_charts(covid)
+skimr::skim_without_charts(vaccine)
+skimr::skim_without_charts(testing)
+```
+
+## Comparing different columns of our dataframes with the dates.
+
+```{r}
+aggregate(covid$Confirmed ~ covid$State_UT + covid$Date, FUN = mean)
+aggregate(covid$Cured ~ covid$State_UT + covid$Date, FUN = mean)
+aggregate(covid$Deaths ~ covid$State_UT + covid$Date, FUN = mean)
+```
+
+```{r}
+aggregate(vaccine$total_doses_administered ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$Sessions ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$Sites ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$first_dose_administered ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$second_dose_administered ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$male_doses_administered ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$female_doses_administered ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$transgender_doses_administered ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$covaxin_doses ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$covishield_doses ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$covishield_doses ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$sputnik_V_doses ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$AEFI ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$males_vaccinated ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$females_vaccinated ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$transgender_vaccinated ~ vaccine$State + vaccine$updated_on, FUN = mean)
+aggregate(vaccine$total_vaccinated ~ vaccine$State + vaccine$updated_on, FUN = mean)
+```
+
+```{r}
+aggregate(testing$TotalSamples ~ testing$State + testing$Date, FUN = mean)
+aggregate(testing$Positive ~ testing$State + testing$Date, FUN = mean)
+aggregate(testing$Negative ~ testing$State + testing$Date, FUN = mean)
+```
+
+## Data Visualization:
+
+Let's check the top 10 states with most ConfirmedIndianNational.
+
+```{r}
+top_states <- head(covid[order(covid$ConfirmedIndianNational, decreasing = TRUE), ], 50)
+ggplot(top_states, aes(x = reorder(State_UT, ConfirmedIndianNational), y = ConfirmedIndianNational)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Top 10 States with Most ConfirmedIndianNational",
+       x = "State",
+       y = "ConfirmedIndianNational") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's check the top states with most ConfirmedForeignNational.
+
+```{r}
+top_CFN <- head(covid[order(covid$ConfirmedForeignNational, decreasing = TRUE), ], 50)
+ggplot(top_CFN, aes(x = reorder(State_UT, ConfirmedForeignNational), y = ConfirmedForeignNational)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Top States with Most ConfirmedForeignNational",
+       x = "State",
+       y = "ConfirmedForeignNational") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's visualize top 10 State_UT by Confirmed Cases.
+
+```{r}
+top_states <- head(covid[order(covid$Confirmed, decreasing = TRUE), ], 900)
+ggplot(top_states, aes(x = Confirmed, y = reorder(State_UT, Confirmed))) +
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Top 10 State_UT by Confirmed Cases",
+       x = "Confirmed Cases",
+       y = "State_UT") +
+  theme_minimal() +
+  coord_flip() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's visualize the top 10 states with most number of deaths.
+
+```{r}
+top_states_deaths <- head(covid[order(covid$Deaths, decreasing = TRUE), ], 900)
+ggplot(top_states_deaths, aes(x = Deaths, y = reorder(State_UT, Deaths))) +
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Top 10 State_UT by Deaths",
+       x = "Deaths",
+       y = "State_UT") +
+  theme_minimal() +
+  coord_flip() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's visualize top 10 states with most cured cases.
+
+```{r}
+top_states_cured <- head(covid[order(covid$Cured, decreasing = TRUE), ], 900)
+ggplot(top_states_cured, aes(x = Cured, y = reorder(State_UT, Cured))) +
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(title = "Top 10 State_UT by Cured Cases",
+       x = "cured Cases",
+       y = "State_UT") +
+  theme_minimal() +
+  coord_flip() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's see the trend of confirmed, cured and deaths.
+
+```{r}
+ggplot(covid, aes(x = Month)) +
+  geom_line(aes(y = Confirmed, color = "Confirmed"), linewidth = 1) +
+  geom_line(aes(y = Cured, color = "Cured"), linewidth = 1) +
+  geom_line(aes(y = Deaths, color = "Death"), linewidth = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("Confirmed" = "blue", "Cured" = "green", "Death" = "red")) +
+  theme_minimal()
+
+```
+
+Let's visualize the top 10 states with most samples collected.
+
+```{r}
+top_states <- head(testing[order(testing$TotalSamples, decreasing = TRUE), ], 1000)
+ggplot(top_states, aes(x = reorder(State, TotalSamples), y = TotalSamples)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Top 10 States by Total Samples",
+       x = "State",
+       y = "Total Samples") +
+  theme_minimal()
+```
+
+Let's visualize the top states with most positive cases.
+
+```{r}
+top_states <- head(testing[order(testing$Positive, decreasing = TRUE), ], 420)
+ggplot(top_states, aes(x = reorder(State, Positive), y = Positive)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Top States by Positive cases",
+       x = "State",
+       y = "Positive cases") +
+  theme_minimal()
+```
+
+Let's see the top 5 states with most negative cases.
+
+```{r}
+top_states <- head(testing[order(testing$Negative, decreasing = TRUE), ], 500)
+ggplot(top_states, aes(x = reorder(State, Negative), y = Negative)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Top 5 States by Negative cases",
+       x = "State",
+       y = "Negative cases") +
+  theme_minimal()
+```
+
+Let's visualize the top 10 states with most doses administered.
+
+```{r}
+top_states <- head(vaccine[order(vaccine$State != 'India', vaccine$total_doses_administered, decreasing = TRUE), ], 450)
+ggplot(top_states, aes(x = reorder(State, total_doses_administered), y = total_doses_administered)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Top 10 States by total doses administered",
+       x = "State",
+       y = "total doses administered") +
+  theme_minimal()
+```
+
+Let's visualize the states with most number of first and second doses administered.
+
+```{r}
+top_states <- head(vaccine[order(vaccine$State != 'India', vaccine$first_dose_administered, vaccine$second_dose_administered, decreasing = TRUE), ], 450)
+ggplot(top_states, aes(x = State)) +
+  geom_col(aes(y = first_dose_administered, fill = "First Doses Administered"), position = "dodge") +
+  geom_col(aes(y = second_dose_administered, fill = "Second Doses Administered"), position = "dodge") +
+  labs(title = "Vaccine Doses Administered by State",
+       x = "State",
+       y = "Doses Administered") +
+  scale_fill_manual(values = c("First Doses Administered" = "blue", "Second Doses Administered" = "green")) +
+  theme_minimal() +
+  theme(legend.position = "top") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's visualize the state with most number of males, females and transgender doses administered.
+
+```{r}
+top_states <- head(vaccine[order(vaccine$State != 'India', vaccine$male_doses_administered, vaccine$female_doses_administered, vaccine$transgender_doses_administered, decreasing = TRUE), ], 450)
+ggplot(top_states, aes(x = State)) +
+  geom_point(aes(y = male_doses_administered, color = "Male Doses Administered")) +
+  geom_point(aes(y = female_doses_administered, color = "Female Doses Administered")) +
+  geom_point(aes(y = transgender_doses_administered, color = "Transgender Doses Administered")) +
+  labs(title = "Vaccine Doses Administered by Gender and State",
+       x = "State",
+       y = "Doses Administered") +
+  scale_color_manual(values = c("Male Doses Administered" = "blue", "Female Doses Administered" = "green", "Transgender Doses Administered" = "purple")) +
+  theme_minimal() +
+  theme(legend.position = "top") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's visualize and see which types of vaccine is uses by most people in different states.
+
+```{r}
+top_states <- head(vaccine[order(vaccine$State != 'India', vaccine$male_doses_administered, vaccine$female_doses_administered, vaccine$transgender_doses_administered, decreasing = TRUE), ], 450)
+ggplot(top_states, aes(x = State)) +
+  geom_point(aes(y = covaxin_doses, color = "covaxin doses")) +
+  geom_point(aes(y = covishield_doses, color = "covishield Doses")) +
+  geom_point(aes(y = sputnik_V_doses, color = "sputnik V Doses")) +
+  labs(title = "Vaccine Doses Administered by types of vaccines and State",
+       x = "State",
+       y = "Doses Administered") +
+  scale_color_manual(values = c("covaxin doses" = "blue", "covishield Doses" = "green", "sputnik V Doses" = "purple")) +
+  theme_minimal() +
+  theme(legend.position = "top") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's see the top states where people are getting more vaccinated.
+
+```{r}
+top_states <- head(vaccine[order(vaccine$State != 'India', vaccine$total_vaccinated, decreasing = TRUE), ], 300)
+ggplot(top_states, aes(x = reorder(State, total_vaccinated), y = total_vaccinated)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  coord_flip() +
+  labs(title = "Top 10 States by total individuals vaccinated",
+       x = "State",
+       y = "total individuals vaccinated") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's see how much TotalSamples were collected in which month including Positive cases and Negative cases. But, let's first create another column which is of month_year to see in which month of which year it is higher.
+
+```{r}
+testing$month_year <- paste(month(testing$Date, label = TRUE), year(testing$Date), sep = " ")
+```
+
+```{r}
+ggplot(testing, aes(x = month_year)) +
+  geom_line(aes(y = TotalSamples, color = "TotalSamples"), linewidth = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("TotalSamples" = "blue")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+ggplot(testing, aes(x = month_year)) +
+  geom_line(aes(y = Positive, color = "Positive"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("Positive" = "blue")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+ggplot(testing, aes(x = month_year)) +
+  geom_line(aes(y = Negative, color = "Negative"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("Negative" = "blue")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's visualize and see in which month there are most number of first and second doses administered.
+
+```{r}
+ggplot(vaccine, aes(x = Month)) +
+  geom_line(aes(y = first_dose_administered, color = "first_dose_administered"), size = 1) +
+  geom_line(aes(y = second_dose_administered, color = "second_dose_administered"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("first_dose_administered" = "blue", "second_dose_administered" = "green")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+Let's visualize and see which in which month there are most number of male, female and transgender doses administered.
+
+```{r}
+ggplot(vaccine, aes(x = Month)) +
+  geom_line(aes(y = male_doses_administered, color = "male_doses_administered"), size = 1) +
+  geom_line(aes(y = female_doses_administered, color = "female_doses_administered"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("male_doses_administered" = "blue", "female_doses_administered" = "green")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+ggplot(vaccine, aes(x = Month)) +
+  geom_line(aes(y = transgender_doses_administered, color = "transgender_doses_administered"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("transgender_doses_administered" = "blue")) +
+  theme_minimal()
+```
+
+Let's visualize in which month people got vaccinated by different vaccines.
+
+```{r}
+ggplot(vaccine, aes(x = Month)) +
+  geom_line(aes(y = covaxin_doses, color = "covaxin_doses"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("covaxin_doses" = "blue")) +
+  theme_minimal()
+```
+
+```{r}
+ggplot(vaccine, aes(x = Month)) +
+  geom_line(aes(y = covishield_doses, color = "covishield_doses"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("covishield_doses" = "blue")) +
+  theme_minimal()
+```
+
+```{r}
+ggplot(vaccine, aes(x = Month)) +
+  geom_line(aes(y = sputnik_V_doses, color = "sputnik_V_doses"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("sputnik_V_doses" = "blue")) +
+  theme_minimal()
+```
+
+```{r}
+ggplot(vaccine, aes(x = Month)) +
+  geom_line(aes(y = AEFI, color = "AEFI"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("AEFI" = "blue")) +
+  theme_minimal()
+```
+
+Let's visualize and see in which month there are most number of male, female and transgender got vaccinated.
+
+```{r}
+ggplot(vaccine, aes(x = Month)) +
+  geom_line(aes(y = males_vaccinated, color = "males_vaccinated"), size = 1) +
+  geom_line(aes(y = females_vaccinated, color = "females_vaccinated"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("males_vaccinated" = "blue", "females_vaccinated" = "green")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+ggplot(vaccine, aes(x = Month)) +
+  geom_line(aes(y = transgender_vaccinated, color = "transgender_vaccinated"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("transgender_vaccinated" = "blue")) +
+  theme_minimal()
+```
+
+Let's see in which month the total individuals got vaccinated.
+
+```{r}
+ggplot(vaccine, aes(x = Month)) +
+  geom_line(aes(y = total_vaccinated, color = "total_vaccinated"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("total_vaccinated" = "blue")) +
+  theme_minimal()
+```
+
+Let's see how many cases of covid were confirmed, cured and deaths happened in each month of year. But, let's first create another column which is of month_year to see in which month of which year it is higher.
+
+```{r}
+covid$month_year <- paste(month(covid$Date, label = TRUE), year(covid$Date), sep = " ")
+```
+
+```{r}
+ggplot(covid, aes(x = month_year)) +
+  geom_line(aes(y = Confirmed, color = "Confirmed"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("Confirmed" = "blue")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+ggplot(covid, aes(x = month_year)) +
+  geom_line(aes(y = Deaths, color = "Deaths"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("Deaths" = "red")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+ggplot(covid, aes(x = month_year)) +
+  geom_line(aes(y = Cured, color = "Cured"), size = 1) +
+  labs(title = "COVID-19 Trends",
+       x = "Month",
+       y = "Counts",
+       color = "Legend") +
+  scale_color_manual(values = c("Cured" = "green")) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
